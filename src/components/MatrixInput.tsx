@@ -57,13 +57,13 @@ export default function MatrixInput({
 
   const getMagnitude = (v: number[]) => Math.hypot(...v).toFixed(3);
   const getDirection = (v: number[]) =>
-    ((Math.atan2(v[1], v[0]) * 180) / Math.PI).toFixed(1) + "°";
+    ((Math.atan2(v[1], v[0]) * 180) / Math.PI).toFixed(1) + "°T";
 
   return (
-    <div className="flex flex-col gap-4 w-full">
+    <div className="flex flex-col gap-6 w-full">
       {text.map((vec, i) => (
         <div key={i} className="flex flex-col items-center gap-1">
-          <div className="font-semibold">{labels[i]}</div>
+          <div className="font-semibold text-xl">{labels[i]}</div>
 
           <div className="flex gap-2">
             {vec.map((val, j) => (
