@@ -39,12 +39,25 @@ export default function LinearCanvas({
     const height = canvas.height;
     const centerX = width / 2;
     const centerY = height / 2;
-
     const scale = 50;
+
+    // Choose axis color based on background brightness
+    const bgColor = getComputedStyle(document.body).backgroundColor;
+    let axisColor = "#999"; // default light gray
+    if (bgColor) {
+      // simple luminance check
+      const rgb = bgColor.match(/\d+/g)?.map(Number) || [255, 255, 255];
+      const lum = 0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2];
+      axisColor = lum < 128 ? "#fff" : "#000"; // white on dark bg, black on light bg
+    }
+
+    ctx.strokeStyle = axisColor;
+    ctx.fillStyle = axisColor;
+    ctx.lineWidth = 1;
 
     // Draw grid
     ctx.strokeStyle = "#ddd";
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 1;
     for (let x = 0; x <= width; x += scale) {
       ctx.beginPath();
       ctx.moveTo(x, 0);
@@ -58,68 +71,49 @@ export default function LinearCanvas({
       ctx.stroke();
     }
 
-    // Draw axes with arrows
-    const drawAxis = (fromX: number, fromY: number, toX: number, toY: number, label: string) => {
-      ctx.strokeStyle = "black";
+    // Draw axes
+    const drawAxis = () => {
+      ctx.strokeStyle = axisColor;
+      ctx.fillStyle = axisColor;
       ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(fromX, fromY);
-      ctx.lineTo(toX, toY);
-      ctx.stroke();
 
-      // arrowhead
-      const angle = Math.atan2(toY - fromY, toX - fromX);
-      const headLen = 10;
-      ctx.beginPath();
-      ctx.moveTo(toX, toY);
-      ctx.lineTo(toX - headLen * Math.cos(angle - Math.PI / 6), toY - headLen * Math.sin(angle - Math.PI / 6));
-      ctx.lineTo(toX - headLen * Math.cos(angle + Math.PI / 6), toY - headLen * Math.sin(angle + Math.PI / 6));
-      ctx.lineTo(toX, toY);
-      ctx.fillStyle = "black";
-      ctx.fill();
+      // X-axis
+      drawArrow(0, centerY, width, centerY);
+      ctx.font = "16px sans-serif";
+      ctx.fillText("x", width - 15, centerY - 10);
 
-      // label
-      ctx.fillStyle = "black";
-      ctx.font = "14px sans-serif";
-      ctx.fillText(label, toX + 5, toY - 5);
+      // Y-axis
+      drawArrow(centerX, height, centerX, 0);
+      ctx.fillText("y", centerX + 10, 15);
     };
 
-    drawAxis(centerX, centerY, centerX + width / 2, centerY, "x");
-        const drawArrow = (x1: number, y1: number, x2: number, y2: number) => {
-          ctx.beginPath();
-          ctx.moveTo(x1, y1);
-          ctx.lineTo(x2, y2);
-          ctx.stroke();
+    const drawArrow = (x1: number, y1: number, x2: number, y2: number) => {
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
 
-          const headLength = 10;
-          const angle = Math.atan2(y2 - y1, x2 - x1);
-          ctx.beginPath();
-          ctx.moveTo(x2, y2);
-          ctx.lineTo(
-            x2 - headLength * Math.cos(angle - Math.PI / 6),
-            y2 - headLength * Math.sin(angle - Math.PI / 6)
-          );
-          ctx.lineTo(
-            x2 - headLength * Math.cos(angle + Math.PI / 6),
-            y2 - headLength * Math.sin(angle + Math.PI / 6)
-          );
-          ctx.lineTo(x2, y2);
-          ctx.fillStyle = "#000";
-          ctx.fill();
-        };
+      const headLen = 10;
+      const angle = Math.atan2(y2 - y1, x2 - x1);
+      ctx.beginPath();
+      ctx.moveTo(x2, y2);
+      ctx.lineTo(x2 - headLen * Math.cos(angle - Math.PI / 6), y2 - headLen * Math.sin(angle - Math.PI / 6));
+      ctx.lineTo(x2 - headLen * Math.cos(angle + Math.PI / 6), y2 - headLen * Math.sin(angle + Math.PI / 6));
+      ctx.lineTo(x2, y2);
+      ctx.fill();
+    };
 
-        ctx.strokeStyle = "#000";
-        ctx.lineWidth = 2;
-        drawArrow(0, centerY, canvas.width, centerY); // X-axis
-        drawArrow(centerX, canvas.height, centerX, 0); // Y-axis
+    drawAxis();
 
-    // Draw a vector arrow
+    // Draw vectors
     const drawVector = (v: number[], color: string, label?: string) => {
       ctx.strokeStyle = color;
       ctx.fillStyle = color;
       ctx.lineWidth = 3;
       const x = centerX + v[0] * scale;
       const y = centerY - v[1] * scale;
+
+      // vector line
       ctx.beginPath();
       ctx.moveTo(centerX, centerY);
       ctx.lineTo(x, y);
@@ -143,74 +137,43 @@ export default function LinearCanvas({
       }
     };
 
-    // Draw original vectors
     drawVector(vectors[0], "red", "A");
     drawVector(vectors[1], "blue", "B");
 
-    // Optional features
-    if (normalizeA) {
-      const mag = Math.hypot(vectors[0][0], vectors[0][1]);
-      if (mag !== 0) drawVector([vectors[0][0] / mag, vectors[0][1] / mag], "orange", "Â");
-    }
-
-    if (normalizeB) {
-      const mag = Math.hypot(vectors[1][0], vectors[1][1]);
-      if (mag !== 0) drawVector([vectors[1][0] / mag, vectors[1][1] / mag], "cyan", "B̂");
-    }
-
+    if (normalizeA) drawVector(normalize(vectors[0]), "orange", "Â");
+    if (normalizeB) drawVector(normalize(vectors[1]), "cyan", "B̂");
     if (linCombo && resultVector) drawVector(resultVector, "green", "Result");
-
-    if (projAontoB) {
-      const dot = vectors[0][0] * vectors[1][0] + vectors[0][1] * vectors[1][1];
-      const magB2 = vectors[1][0] ** 2 + vectors[1][1] ** 2;
-      if (magB2 !== 0) {
-        const proj = [(dot / magB2) * vectors[1][0], (dot / magB2) * vectors[1][1]];
-        drawVector(proj, "purple", "proj A→B");
-      }
-    }
-
-    if (projBontoA) {
-      const dot = vectors[0][0] * vectors[1][0] + vectors[0][1] * vectors[1][1];
-      const magA2 = vectors[0][0] ** 2 + vectors[0][1] ** 2;
-      if (magA2 !== 0) {
-        const proj = [(dot / magA2) * vectors[0][0], (dot / magA2) * vectors[0][1]];
-        drawVector(proj, "brown", "proj B→A");
-      }
-    }
-
+    if (projAontoB) drawVector(project(vectors[0], vectors[1]), "purple", "proj A→B");
+    if (projBontoA) drawVector(project(vectors[1], vectors[0]), "brown", "proj B→A");
     if (decomposeA) {
-      // decomposition: A = projAontoB + perp
-      const dot = vectors[0][0] * vectors[1][0] + vectors[0][1] * vectors[1][1];
-      const magB2 = vectors[1][0] ** 2 + vectors[1][1] ** 2;
-      if (magB2 !== 0) {
-        const proj = [(dot / magB2) * vectors[1][0], (dot / magB2) * vectors[1][1]];
-        const perp = [vectors[0][0] - proj[0], vectors[0][1] - proj[1]];
-        drawVector(proj, "purple", "proj A→B");
-        drawVector(perp, "red", "A⊥");
-      }
+      const [proj, perp] = decompose(vectors[0], vectors[1]);
+      drawVector(proj, "purple", "proj A→B");
+      drawVector(perp, "red", "A⊥");
+    }
+    if (decomposeB) {
+      const [proj, perp] = decompose(vectors[1], vectors[0]);
+      drawVector(proj, "brown", "proj B→A");
+      drawVector(perp, "blue", "B⊥");
     }
 
-    if (decomposeB) {
-      const dot = vectors[0][0] * vectors[1][0] + vectors[0][1] * vectors[1][1];
-      const magA2 = vectors[0][0] ** 2 + vectors[0][1] ** 2;
-      if (magA2 !== 0) {
-        const proj = [(dot / magA2) * vectors[0][0], (dot / magA2) * vectors[0][1]];
-        const perp = [vectors[1][0] - proj[0], vectors[1][1] - proj[1]];
-        drawVector(proj, "brown", "proj B→A");
-        drawVector(perp, "blue", "B⊥");
-      }
+    function normalize(v: number[]) {
+      const mag = Math.hypot(...v);
+      return mag === 0 ? [0, 0] : v.map((x) => x / mag);
     }
-  }, [
-    vectors,
-    resultVector,
-    linCombo,
-    normalizeA,
-    normalizeB,
-    projAontoB,
-    projBontoA,
-    decomposeA,
-    decomposeB,
-  ]);
+
+    function project(a: number[], b: number[]) {
+      const magB2 = b.reduce((s, x) => s + x * x, 0);
+      if (magB2 === 0) return [0, 0];
+      const dot = a.reduce((s, x, i) => s + x * b[i], 0);
+      return b.map((x) => (dot / magB2) * x);
+    }
+
+    function decompose(a: number[], b: number[]) {
+      const projVec = project(a, b);
+      const perp = a.map((x, i) => x - projVec[i]);
+      return [projVec, perp];
+    }
+  }, [vectors, resultVector, linCombo, normalizeA, normalizeB, projAontoB, projBontoA, decomposeA, decomposeB]);
 
   return <canvas ref={canvasRef} width={700} height={700} className="border" />;
 }

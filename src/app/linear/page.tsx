@@ -125,16 +125,21 @@ export default function LinearPage() {
                 const vec = item.vector();
                 const display = `(${vec[0].toFixed(2)}, ${vec[1].toFixed(2)})`;
                 return (
-                  <button
+                <button
                     key={item.label}
                     onClick={() => item.setter(!item.state)}
-                    className={`flex flex-col items-center justify-center p-2 border rounded text-sm transition-colors duration-200 ${
-                      item.state ? "bg-gray-300" : "bg-white"
-                    }`}
-                  >
-                    <span>{item.label}</span>
-                    <span className="text-xs text-gray-600">{display}</span>
-                  </button>
+                    className={`
+                    flex flex-col items-center justify-center p-2 border rounded text-sm transition-colors duration-200
+                    ${item.state
+                        ? "bg-gray-300 dark:bg-gray-700 border-gray-500"
+                        : "bg-white dark:bg-gray-800 border-gray-400"}
+                    hover:bg-gray-200 dark:hover:bg-gray-600
+                    focus:outline-none
+                    `}
+                >
+                    <span className="text-gray-900 dark:text-gray-100">{item.label}</span>
+                    <span className="text-xs text-gray-600 dark:text-gray-300">{display}</span>
+                </button>
                 );
               })}
             </div>
